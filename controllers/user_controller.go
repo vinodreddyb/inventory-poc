@@ -31,3 +31,12 @@ func GetAllUsers(c *fiber.Ctx) error {
 		responses.UserResponse{Status: http.StatusOK, Message: "success", Body: &fiber.Map{"users": users}},
 	)
 }
+
+func GetAllCivil(c *fiber.Ctx) error {
+
+	civils := services.GetCivils()
+
+	return c.Status(http.StatusOK).JSON(
+		responses.UserResponse{Status: http.StatusOK, Message: "success", Body: &fiber.Map{"civils": civils}},
+	)
+}
