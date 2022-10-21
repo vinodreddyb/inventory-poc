@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"github.com/gofiber/fiber/v2"
+	logr "github.com/sirupsen/logrus"
 	"mongo-rest/models"
 	"mongo-rest/responses"
 	"mongo-rest/services"
@@ -10,6 +11,7 @@ import (
 
 func CreateUser(c *fiber.Ctx) error {
 
+	logr.Info("This is create user")
 	var user models.User
 
 	if err := c.BodyParser(&user); err != nil {
@@ -45,6 +47,7 @@ func GetAllCivil(c *fiber.Ctx) error {
 
 func GetAllCivilFields(c *fiber.Ctx) error {
 
+	logr.Info("This is civil fields")
 	civils, err := services.GetCivilFields()
 	if err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(responses.UserResponse{Status: http.StatusInternalServerError, Message: "error", Body: &fiber.Map{"data": err.Error()}})

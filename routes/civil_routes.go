@@ -5,7 +5,7 @@ import (
 	"mongo-rest/controllers"
 )
 
-func UserRoute(app *fiber.App) {
+func CivilRoutes(app *fiber.App) {
 	app.Post("/user", controllers.CreateUser)
 	app.Get("/users", controllers.GetAllUsers)
 	app.Get("/civil", controllers.GetAllCivil)
