@@ -28,15 +28,28 @@ func CreateUser(c *fiber.Ctx) error {
 func GetAllUsers(c *fiber.Ctx) error {
 	users := services.GetAllUsers()
 	return c.Status(http.StatusOK).JSON(
-		responses.UserResponse{Status: http.StatusOK, Message: "success", Body: &fiber.Map{"users": users}},
+		responses.UserResponse{Status: http.StatusOK, Message: "success", Body: users},
 	)
 }
 
 func GetAllCivil(c *fiber.Ctx) error {
 
-	civils := services.GetCivils()
-
+	civils, err := services.GetCivils()
+	if err != nil {
+		return c.Status(http.StatusInternalServerError).JSON(responses.UserResponse{Status: http.StatusInternalServerError, Message: "error", Body: &fiber.Map{"data": err.Error()}})
+	}
 	return c.Status(http.StatusOK).JSON(
-		responses.UserResponse{Status: http.StatusOK, Message: "success", Body: &fiber.Map{"civils": civils}},
+		responses.UserResponse{Status: http.StatusOK, Message: "success", Body: civils},
+	)
+}
+
+func GetAllCivilFields(c *fiber.Ctx) error {
+
+	civils, err := services.GetCivilFields()
+	if err != nil {
+		return c.Status(http.StatusInternalServerError).JSON(responses.UserResponse{Status: http.StatusInternalServerError, Message: "error", Body: &fiber.Map{"data": err.Error()}})
+	}
+	return c.Status(http.StatusOK).JSON(
+		responses.UserResponse{Status: http.StatusOK, Message: "success", Body: civils},
 	)
 }

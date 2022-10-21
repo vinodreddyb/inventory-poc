@@ -1,0 +1,69 @@
+[
+  {
+    "group" : "supply",
+    "fields" : [
+      {
+        "type": "InputText",
+        "label": "Unit Rate"
+      },
+      {
+        "type": "InputNumber",
+        "label": "Amount",
+        "attributes": {
+          "currency": "INR",
+          "locale": "en-IN"
+        }
+      },
+      {
+        "type": "InputText",
+        "label": "VAT",
+        "attributes": {
+          "mode": "decimal"
+        }
+      },
+      {
+        "type": "InputText",
+        "label": "Total",
+        "attributes": {
+          "currency": "INR",
+          "locale": "en-IN"
+        }
+      }
+    ]
+  },
+  {
+    "group": "install",
+    "fields": [
+      {
+        "type": "InputText",
+        "label": "Unit Rate"
+      },
+      {
+        "type": "InputNumber",
+        "label": "Amount",
+        "attributes": {
+          "currency": "INR",
+          "locale": "en-IN"
+        }
+      },
+      {
+        "type": "InputText",
+        "label": "VAT",
+        "attributes": {
+          "mode": "decimal"
+        }
+      },
+      {
+        "type": "InputText",
+        "label": "Total",
+        "attributes": {
+          "currency": "INR",
+          "locale": "en-IN"
+        }
+      }
+    ]
+  }
+]
+
+
+

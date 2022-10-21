@@ -6,13 +6,13 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"log"
 	"mongo-rest/configs"
-	"mongo-rest/dbmodels"
 	"mongo-rest/models"
 	"time"
 )
 
 var userCollection = configs.GetCollection(configs.DB, "Users")
 var civilCollection = configs.GetCollection(configs.DB, "civil")
+var civilFieldsCollection = configs.GetCollection(configs.DB, "civil_fields")
 
 func AddNewUser(user *models.User) (*models.User, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -56,23 +56,47 @@ func GetAllUsers() []models.User {
 	return users
 }
 
-func GetCivils() []dbmodels.Civil {
+func GetCivils() ([]models.Civil, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	cursor, err := civilCollection.Find(ctx, bson.M{})
 	if err != nil {
 		log.Fatal(err)
+		return nil, err
 	}
 	defer cursor.Close(ctx)
 
-	var civils []dbmodels.Civil
+	var civils []models.Civil
 
 	for cursor.Next(ctx) {
-		var civil dbmodels.Civil
+		var civil models.Civil
 		if err = cursor.Decode(&civil); err != nil {
 			log.Fatal(err)
 		}
 		civils = append(civils, civil)
 	}
-	return civils
+	return civils, nil
+}
+
+func GetCivilFields() ([]models.CivilFields, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	cursor, err := civilFieldsCollection.Find(ctx, bson.M{})
+	if err != nil {
+		log.Fatal(err)
+		return nil, err
+	}
+
+	defer cursor.Close(ctx)
+	var civilFields []models.CivilFields
+
+	for cursor.Next(ctx) {
+		var civilField models.CivilFields
+		if err = cursor.Decode(&civilField); err != nil {
+			log.Fatal(err)
+		}
+		civilFields = append(civilFields, civilField)
+	}
+	return civilFields, nil
 }
