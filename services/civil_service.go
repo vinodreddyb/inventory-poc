@@ -56,10 +56,14 @@ func GetAllUsers() []models.User {
 	return users
 }
 
-func GetCivils() ([]models.Civil, error) {
+func GetCivils(path string) ([]models.Civil, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	cursor, err := civilCollection.Find(ctx, bson.M{})
+	m := bson.M{}
+	if path != "" {
+		m = bson.M{"path": path}
+	}
+	cursor, err := civilCollection.Find(ctx, m)
 	if err != nil {
 		log.Fatal(err)
 		return nil, err

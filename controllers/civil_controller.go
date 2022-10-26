@@ -36,7 +36,8 @@ func GetAllUsers(c *fiber.Ctx) error {
 
 func GetAllCivil(c *fiber.Ctx) error {
 
-	civils, err := services.GetCivils()
+	path := c.Query("path", "")
+	civils, err := services.GetCivils(path)
 	if err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(responses.UserResponse{Status: http.StatusInternalServerError, Message: "error", Body: &fiber.Map{"data": err.Error()}})
 	}
