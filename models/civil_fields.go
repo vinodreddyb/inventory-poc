@@ -3,6 +3,7 @@ package models
 type Field struct {
 	Type       string            `json:"type"`
 	Label      string            `json:"label"`
+	Name       string            `json:"name"`
 	Attributes map[string]string `json:"attributes"`
 }
 
