@@ -146,6 +146,7 @@ func civilDoToDto(civil models.Civil) models.CivilDTO {
 	civilDto := models.CivilDTO{
 		Id:        civil.Id,
 		Name:      civil.Name,
+		Tender:    civil.Tender,
 		Unit:      civil.Unit,
 		Quantity:  civil.Quantity,
 		StartDate: models.ISODate{Time: civil.StartDate, Format: "2006-01-02"},
@@ -160,6 +161,7 @@ func civilDtoToDo(civil models.CivilDTO) models.Civil {
 	civilDto := models.Civil{
 		Id:        civil.Id,
 		Name:      civil.Name,
+		Tender:    civil.Tender,
 		Unit:      civil.Unit,
 		Quantity:  civil.Quantity,
 		StartDate: civil.StartDate.Time,

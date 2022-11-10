@@ -38,11 +38,13 @@ type Civil struct {
 	Path      string                 `json:"path"`
 	Supply    map[string]interface{} `json:"supply"`
 	Install   map[string]interface{} `json:"install"`
+	Tender    bool                   `json:"tender"`
 }
 
 type CivilDTO struct {
 	Id        string                 `json:"id,omitempty"`
 	Name      string                 `json:"name"`
+	Tender    bool                   `json:"tender"`
 	Unit      string                 `json:"unit"`
 	Quantity  int                    `json:"quantity"`
 	StartDate ISODate                `json:"startDate,omitempty"`
