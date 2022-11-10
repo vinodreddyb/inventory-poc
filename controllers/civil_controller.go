@@ -15,22 +15,22 @@ func CreateUser(c *fiber.Ctx) error {
 	var user models.User
 
 	if err := c.BodyParser(&user); err != nil {
-		return c.Status(http.StatusBadRequest).JSON(responses.UserResponse{Status: http.StatusBadRequest, Message: "error", Body: &fiber.Map{"data": err.Error()}})
+		return c.Status(http.StatusBadRequest).JSON(responses.APIResponse{Status: http.StatusBadRequest, Message: "error", Body: &fiber.Map{"data": err.Error()}})
 	}
 
 	usr, err := services.AddNewUser(&user)
 
 	if err != nil {
-		return c.Status(http.StatusInternalServerError).JSON(responses.UserResponse{Status: http.StatusInternalServerError, Message: "error", Body: &fiber.Map{"data": err.Error()}})
+		return c.Status(http.StatusInternalServerError).JSON(responses.APIResponse{Status: http.StatusInternalServerError, Message: "error", Body: &fiber.Map{"data": err.Error()}})
 	}
 
-	return c.Status(http.StatusCreated).JSON(responses.UserResponse{Status: http.StatusCreated, Message: "success", Body: &fiber.Map{"user": usr}})
+	return c.Status(http.StatusCreated).JSON(responses.APIResponse{Status: http.StatusCreated, Message: "success", Body: &fiber.Map{"user": usr}})
 }
 
 func GetAllUsers(c *fiber.Ctx) error {
 	users := services.GetAllUsers()
 	return c.Status(http.StatusOK).JSON(
-		responses.UserResponse{Status: http.StatusOK, Message: "success", Body: users},
+		responses.APIResponse{Status: http.StatusOK, Message: "success", Body: users},
 	)
 }
 
@@ -39,10 +39,10 @@ func GetAllCivil(c *fiber.Ctx) error {
 	path := c.Query("path", "")
 	civils, err := services.GetCivils(path)
 	if err != nil {
-		return c.Status(http.StatusInternalServerError).JSON(responses.UserResponse{Status: http.StatusInternalServerError, Message: "error", Body: &fiber.Map{"data": err.Error()}})
+		return c.Status(http.StatusInternalServerError).JSON(responses.APIResponse{Status: http.StatusInternalServerError, Message: "error", Body: &fiber.Map{"data": err.Error()}})
 	}
 	return c.Status(http.StatusOK).JSON(
-		responses.UserResponse{Status: http.StatusOK, Message: "success", Body: civils},
+		responses.APIResponse{Status: http.StatusOK, Message: "success", Body: civils},
 	)
 }
 
@@ -51,9 +51,45 @@ func GetAllCivilFields(c *fiber.Ctx) error {
 	logr.Info("This is civil fields")
 	civils, err := services.GetCivilFields()
 	if err != nil {
-		return c.Status(http.StatusInternalServerError).JSON(responses.UserResponse{Status: http.StatusInternalServerError, Message: "error", Body: &fiber.Map{"data": err.Error()}})
+		return c.Status(http.StatusInternalServerError).JSON(responses.APIResponse{Status: http.StatusInternalServerError, Message: "error", Body: &fiber.Map{"data": err.Error()}})
 	}
 	return c.Status(http.StatusOK).JSON(
-		responses.UserResponse{Status: http.StatusOK, Message: "success", Body: civils},
+		responses.APIResponse{Status: http.StatusOK, Message: "success", Body: civils},
 	)
+}
+
+func AddNewNode(c *fiber.Ctx) error {
+
+	logr.Info("Add new node")
+	var civilNode models.CivilDTO
+
+	if err := c.BodyParser(&civilNode); err != nil {
+		return c.Status(http.StatusBadRequest).JSON(responses.APIResponse{Status: http.StatusBadRequest, Message: "error", Body: &fiber.Map{"data": err.Error()}})
+	}
+
+	err := services.AddCivilNode(civilNode)
+
+	if err != nil {
+		return c.Status(http.StatusInternalServerError).JSON(responses.APIResponse{Status: http.StatusInternalServerError, Message: "error", Body: &fiber.Map{"data": err.Error()}})
+	}
+
+	return c.Status(http.StatusCreated).JSON(responses.APIResponse{Status: http.StatusCreated, Message: "success", Body: "Created"})
+}
+
+func UpdateNodeValues(c *fiber.Ctx) error {
+
+	logr.Info("Update node values")
+	var civilNode models.CivilDTO
+
+	if err := c.BodyParser(&civilNode); err != nil {
+		return c.Status(http.StatusBadRequest).JSON(responses.APIResponse{Status: http.StatusBadRequest, Message: "error", Body: &fiber.Map{"data": err.Error()}})
+	}
+
+	result, err := services.UpdateCivilNode(civilNode)
+
+	if err != nil {
+		return c.Status(http.StatusInternalServerError).JSON(responses.APIResponse{Status: http.StatusInternalServerError, Message: "error", Body: &fiber.Map{"data": err.Error()}})
+	}
+
+	return c.Status(http.StatusCreated).JSON(responses.APIResponse{Status: http.StatusCreated, Message: "success", Body: result})
 }

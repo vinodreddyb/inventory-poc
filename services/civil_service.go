@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	logr "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"log"
@@ -39,7 +40,7 @@ func GetAllUsers() []models.User {
 	defer cancel()
 	cursor, err := userCollection.Find(ctx, bson.M{})
 	if err != nil {
-		log.Fatal(err)
+		logr.Error(err)
 	}
 
 	defer cursor.Close(ctx)
@@ -56,7 +57,7 @@ func GetAllUsers() []models.User {
 	return users
 }
 
-func GetCivils(path string) ([]models.Civil, error) {
+func GetCivils(path string) (*[]models.CivilDTO, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	m := bson.M{}
@@ -70,16 +71,18 @@ func GetCivils(path string) ([]models.Civil, error) {
 	}
 	defer cursor.Close(ctx)
 
-	var civils []models.Civil
+	var civils []models.CivilDTO
 
 	for cursor.Next(ctx) {
 		var civil models.Civil
-		if err = cursor.Decode(&civil); err != nil {
-			log.Fatal(err)
+		err = cursor.Decode(&civil)
+		if err != nil {
+			logr.Error(err)
+			return nil, err
 		}
-		civils = append(civils, civil)
+		civils = append(civils, civilDoToDto(civil))
 	}
-	return civils, nil
+	return &civils, nil
 }
 
 func GetCivilFields() ([]models.CivilFields, error) {
@@ -98,9 +101,72 @@ func GetCivilFields() ([]models.CivilFields, error) {
 	for cursor.Next(ctx) {
 		var civilField models.CivilFields
 		if err = cursor.Decode(&civilField); err != nil {
-			log.Fatal(err)
+			logr.Error(err)
 		}
 		civilFields = append(civilFields, civilField)
 	}
 	return civilFields, nil
+}
+
+func AddCivilNode(civilNode models.CivilDTO) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	//civilCollection.U
+	defer cancel()
+	_, err := civilCollection.InsertOne(ctx, civilDtoToDo(civilNode))
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func UpdateCivilNode(civilNode models.CivilDTO) (models.CivilDTO, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	update := bson.M{
+		"$set": bson.M{"unit": civilNode.Unit,
+			"quantity":  civilNode.Quantity,
+			"supply":    civilNode.Supply,
+			"install":   civilNode.Install,
+			"startDate": civilNode.StartDate.Time,
+			"endDate":   civilNode.EndDate.Time,
+		},
+	}
+	result := civilCollection.FindOneAndUpdate(ctx, bson.M{"_id": civilNode.Id}, update)
+
+	if result.Err() != nil {
+		return models.CivilDTO{}, result.Err()
+	}
+
+	return civilNode, nil
+}
+
+func civilDoToDto(civil models.Civil) models.CivilDTO {
+	civilDto := models.CivilDTO{
+		Id:        civil.Id,
+		Name:      civil.Name,
+		Unit:      civil.Unit,
+		Quantity:  civil.Quantity,
+		StartDate: models.ISODate{Time: civil.StartDate, Format: "2006-01-02"},
+		EndDate:   models.ISODate{Time: civil.EndDate, Format: "2006-01-02"},
+		Path:      civil.Path,
+		Supply:    civil.Supply,
+		Install:   civil.Install,
+	}
+	return civilDto
+}
+func civilDtoToDo(civil models.CivilDTO) models.Civil {
+	civilDto := models.Civil{
+		Id:        civil.Id,
+		Name:      civil.Name,
+		Unit:      civil.Unit,
+		Quantity:  civil.Quantity,
+		StartDate: civil.StartDate.Time,
+		EndDate:   civil.EndDate.Time,
+		Path:      civil.Path,
+		Supply:    civil.Supply,
+		Install:   civil.Install,
+	}
+	return civilDto
 }
