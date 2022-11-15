@@ -12,4 +12,5 @@ func CivilRoutes(app *fiber.App) {
 	app.Get("/civil/fields", controllers.GetAllCivilFields)
 	app.Post("/civil/node", controllers.AddNewNode)
 	app.Put("/civil/node/values", controllers.UpdateNodeValues)
+	app.Post("/civil/status", controllers.AddStatus)
 }

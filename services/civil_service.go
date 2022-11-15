@@ -2,9 +2,11 @@ package services
 
 import (
 	"context"
+	"errors"
 	logr "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 	"log"
 	"mongo-rest/configs"
 	"mongo-rest/models"
@@ -14,6 +16,7 @@ import (
 var userCollection = configs.GetCollection(configs.DB, "Users")
 var civilCollection = configs.GetCollection(configs.DB, "civil")
 var civilFieldsCollection = configs.GetCollection(configs.DB, "civil_fields")
+var civilProgressCollection = configs.GetCollection(configs.DB, "civil_progress")
 
 func AddNewUser(user *models.User) (*models.User, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -80,7 +83,7 @@ func GetCivils(path string) (*[]models.CivilDTO, error) {
 			logr.Error(err)
 			return nil, err
 		}
-		civils = append(civils, civilDoToDto(civil))
+		civils = append(civils, models.CivilDoToDto(civil))
 	}
 	return &civils, nil
 }
@@ -112,7 +115,7 @@ func AddCivilNode(civilNode models.CivilDTO) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	//civilCollection.U
 	defer cancel()
-	_, err := civilCollection.InsertOne(ctx, civilDtoToDo(civilNode))
+	_, err := civilCollection.InsertOne(ctx, models.CivilDtoToDo(civilNode))
 
 	if err != nil {
 		return err
@@ -142,33 +145,33 @@ func UpdateCivilNode(civilNode models.CivilDTO) (models.CivilDTO, error) {
 	return civilNode, nil
 }
 
-func civilDoToDto(civil models.Civil) models.CivilDTO {
-	civilDto := models.CivilDTO{
-		Id:        civil.Id,
-		Name:      civil.Name,
-		Tender:    civil.Tender,
-		Unit:      civil.Unit,
-		Quantity:  civil.Quantity,
-		StartDate: models.ISODate{Time: civil.StartDate, Format: "2006-01-02"},
-		EndDate:   models.ISODate{Time: civil.EndDate, Format: "2006-01-02"},
-		Path:      civil.Path,
-		Supply:    civil.Supply,
-		Install:   civil.Install,
+func AddWorkStatus(progress models.CivilProgressDTO) (*models.CivilProgressDTO, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	nodeDetails := civilCollection.FindOne(ctx, bson.M{"_id": progress.NodeId})
+	if nodeDetails != nil {
+		// ErrNoDocuments means that the filter did not match any documents in the collection
+		if nodeDetails.Err() == mongo.ErrNoDocuments {
+			return nil, errors.New("No documents found with node " + progress.NodeId)
+		}
+		var node models.Civil
+		errD := nodeDetails.Decode(&node)
+		if errD != nil {
+			return nil, errors.New("Error decoding node from DB " + progress.NodeId)
+		}
+
+		if !(progress.Date.Time.Before(node.EndDate) && progress.Date.Time.After(node.StartDate)) {
+			return nil, errors.New("enter status date with in start date and end date range")
+		}
+
 	}
-	return civilDto
-}
-func civilDtoToDo(civil models.CivilDTO) models.Civil {
-	civilDto := models.Civil{
-		Id:        civil.Id,
-		Name:      civil.Name,
-		Tender:    civil.Tender,
-		Unit:      civil.Unit,
-		Quantity:  civil.Quantity,
-		StartDate: civil.StartDate.Time,
-		EndDate:   civil.EndDate.Time,
-		Path:      civil.Path,
-		Supply:    civil.Supply,
-		Install:   civil.Install,
+	progressDO := models.CivilProgressDtoToDo(progress)
+	result, err := civilProgressCollection.InsertOne(ctx, progressDO)
+
+	if err != nil {
+		return nil, err
 	}
-	return civilDto
+	progress.Id = result.InsertedID.(primitive.ObjectID).String()
+
+	return &progress, nil
 }
