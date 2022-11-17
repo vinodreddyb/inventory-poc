@@ -111,3 +111,22 @@ func AddStatus(c *fiber.Ctx) error {
 
 	return c.Status(http.StatusCreated).JSON(responses.APIResponse{Status: http.StatusCreated, Message: "success", Body: result})
 }
+
+func GetCivilProgress(c *fiber.Ctx) error {
+
+	nodeId := c.Params("nodeId", "")
+	graph := c.Query("graph", "false")
+	civilProgress, graphData, err := services.GetStatusGraph(nodeId)
+	if err != nil {
+		return c.Status(http.StatusInternalServerError).JSON(responses.APIResponse{Status: http.StatusInternalServerError, Message: "error", Body: &fiber.Map{"data": err.Error()}})
+	}
+	if graph == "true" {
+		return c.Status(http.StatusOK).JSON(
+			responses.APIResponse{Status: http.StatusOK, Message: "success", Body: graphData},
+		)
+	}
+	return c.Status(http.StatusOK).JSON(
+		responses.APIResponse{Status: http.StatusOK, Message: "success", Body: civilProgress},
+	)
+
+}

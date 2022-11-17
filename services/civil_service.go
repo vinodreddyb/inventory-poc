@@ -175,3 +175,65 @@ func AddWorkStatus(progress models.CivilProgressDTO) (*models.CivilProgressDTO, 
 
 	return &progress, nil
 }
+
+func GetStatusGraph(nodeId string) ([]models.CivilProgressDTO, *models.CivilProgressGraph, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	nodeDetails := civilCollection.FindOne(ctx, bson.M{"_id": nodeId})
+	if nodeDetails != nil {
+		// ErrNoDocuments means that the filter did not match any documents in the collection
+		if nodeDetails.Err() == mongo.ErrNoDocuments {
+			return nil, nil, errors.New("No documents found with node " + nodeId)
+		}
+	}
+
+	cursor, errD := civilProgressCollection.Find(ctx, bson.M{"nodeid": nodeId})
+	if errD != nil {
+		return nil, nil, errD
+	}
+
+	defer cursor.Close(ctx)
+	statusesMap := make(map[string]models.CivilProgressDTO)
+	for cursor.Next(ctx) {
+		var status models.CivilProgress
+		if errD = cursor.Decode(&status); errD != nil {
+			logr.Error(errD)
+			return nil, nil, errD
+		}
+		statusesMap[status.Date.Format("2006-01-02")] = models.CivilProgressDoToDto(status)
+	}
+
+	var node models.Civil
+	errDD := nodeDetails.Decode(&node)
+	if errDD != nil {
+		return nil, nil, errors.New("Error decoding node from DB " + nodeId)
+	}
+	var civilProgress []models.CivilProgressDTO
+	var labels []string
+	var data []float64
+	for d := node.StartDate; d.After(node.EndDate) == false; d = d.AddDate(0, 0, 1) {
+		labels = append(labels, d.Format("2006-01-02"))
+		if val, ok := statusesMap[d.Format("2006-01-02")]; ok {
+			civilProgress = append(civilProgress, val)
+			data = append(data, val.Percentage)
+		} else {
+			civilProgress = append(civilProgress, models.CivilProgressDTO{
+				NodeId:     nodeId,
+				Date:       models.ISODate{Time: d, Format: "2006-01-02"},
+				Percentage: 0,
+			})
+			data = append(data, 0)
+		}
+	}
+	graph := models.CivilProgressGraph{
+		Labels: labels,
+		DataSets: []models.GraphDataSet{
+			{
+				Label:           "Status",
+				BackgroundColor: "#42A5F5",
+				Data:            data,
+			},
+		},
+	}
+	return civilProgress, &graph, nil
+}

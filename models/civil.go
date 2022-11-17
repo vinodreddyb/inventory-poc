@@ -43,7 +43,7 @@ type Civil struct {
 }
 
 type CivilProgressDTO struct {
-	Id         string  `json:"id"`
+	Id         string  `json:"id,omitempty"`
 	NodeId     string  `json:"nodeId"`
 	Date       ISODate `json:"date,omitempty"`
 	Percentage float64 `json:"percentage"`
@@ -69,6 +69,17 @@ type CivilDTO struct {
 	Install   map[string]interface{} `json:"install"`
 }
 
+type CivilProgressGraph struct {
+	Labels   []string       `json:"labels"`
+	DataSets []GraphDataSet `json:"datasets"`
+}
+
+type GraphDataSet struct {
+	Label           string    `json:"label"`
+	BackgroundColor string    `json:"backgroundColor"`
+	Data            []float64 `json:"data"`
+}
+
 func CivilProgressDtoToDo(civil CivilProgressDTO) CivilProgress {
 	civilDto := CivilProgress{
 		NodeId:     civil.NodeId,
@@ -78,6 +89,14 @@ func CivilProgressDtoToDo(civil CivilProgressDTO) CivilProgress {
 	return civilDto
 }
 
+func CivilProgressDoToDto(civil CivilProgress) CivilProgressDTO {
+	civilDto := CivilProgressDTO{
+		NodeId:     civil.NodeId,
+		Date:       ISODate{Time: civil.Date, Format: "2006-01-02"},
+		Percentage: civil.Percentage,
+	}
+	return civilDto
+}
 func CivilDoToDto(civil Civil) CivilDTO {
 	civilDto := CivilDTO{
 		Id:        civil.Id,
