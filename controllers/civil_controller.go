@@ -62,18 +62,18 @@ func AddNewNode(c *fiber.Ctx) error {
 
 	logr.Info("Add new node")
 	var civilNode models.CivilDTO
-
+	nodeId := c.Params("nodeId", "")
 	if err := c.BodyParser(&civilNode); err != nil {
 		return c.Status(http.StatusBadRequest).JSON(responses.APIResponse{Status: http.StatusBadRequest, Message: "error", Body: &fiber.Map{"data": err.Error()}})
 	}
 
-	err := services.AddCivilNode(civilNode)
+	nodes, err := services.AddCivilNode(nodeId, civilNode)
 
 	if err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(responses.APIResponse{Status: http.StatusInternalServerError, Message: "error", Body: &fiber.Map{"data": err.Error()}})
 	}
 
-	return c.Status(http.StatusCreated).JSON(responses.APIResponse{Status: http.StatusCreated, Message: "success", Body: "Created"})
+	return c.Status(http.StatusCreated).JSON(responses.APIResponse{Status: http.StatusCreated, Message: "success", Body: nodes})
 }
 
 func UpdateNodeValues(c *fiber.Ctx) error {

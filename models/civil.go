@@ -42,6 +42,19 @@ type Civil struct {
 	Type      string                 `json:"type"`
 }
 
+type CivilProgessJoin struct {
+	Id        string                 `bson:"_id" json:"id,omitempty"`
+	Name      string                 `json:"name"`
+	Unit      string                 `json:"unit"`
+	Quantity  int                    `json:"quantity"`
+	StartDate time.Time              `bson:"startDate,omitempty"json:"startDate,omitempty"`
+	EndDate   time.Time              `bson:"endDate,omitempty" json:"endDate,omitempty"`
+	Path      string                 `json:"path"`
+	Supply    map[string]interface{} `json:"supply"`
+	Install   map[string]interface{} `json:"install"`
+	Type      string                 `json:"type"`
+	Progress  []CivilProgress
+}
 type CivilProgressDTO struct {
 	Id         string  `json:"id,omitempty"`
 	NodeId     string  `json:"nodeId"`
@@ -67,6 +80,7 @@ type CivilDTO struct {
 	Path      string                 `json:"path"`
 	Supply    map[string]interface{} `json:"supply"`
 	Install   map[string]interface{} `json:"install"`
+	Progress  []CivilProgressDTO     `json:"progress,omitempty"`
 }
 
 type CivilProgressGraph struct {
@@ -109,6 +123,26 @@ func CivilDoToDto(civil Civil) CivilDTO {
 		Path:      civil.Path,
 		Supply:    civil.Supply,
 		Install:   civil.Install,
+	}
+	return civilDto
+}
+func CivilJoinDoToDto(civil CivilProgessJoin) CivilDTO {
+	var progressDTOS []CivilProgressDTO
+	for _, pr := range civil.Progress {
+		progressDTOS = append(progressDTOS, CivilProgressDoToDto(pr))
+	}
+	civilDto := CivilDTO{
+		Id:        civil.Id,
+		Name:      civil.Name,
+		Type:      civil.Type,
+		Unit:      civil.Unit,
+		Quantity:  civil.Quantity,
+		StartDate: ISODate{Time: civil.StartDate, Format: "2006-01-02"},
+		EndDate:   ISODate{Time: civil.EndDate, Format: "2006-01-02"},
+		Path:      civil.Path,
+		Supply:    civil.Supply,
+		Install:   civil.Install,
+		Progress:  progressDTOS,
 	}
 	return civilDto
 }

@@ -3,13 +3,17 @@ package services
 import (
 	"context"
 	"errors"
+	"fmt"
 	logr "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"log"
 	"mongo-rest/configs"
 	"mongo-rest/models"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -60,14 +64,23 @@ func GetAllUsers() []models.User {
 	return users
 }
 
-func GetCivils(path string) (*[]models.CivilDTO, error) {
+func GetCivils(path string) ([]models.CivilDTO, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	m := bson.M{}
+
+	pipeline := mongo.Pipeline{}
 	if path != "" {
-		m = bson.M{"path": path}
+		//m = bson.M{"path": path}
+		match := bson.D{{"$match", bson.M{"path": path}}}
+		pipeline = append(pipeline, match)
 	}
-	cursor, err := civilCollection.Find(ctx, m)
+	lookup := bson.D{{"$lookup", bson.M{"from": "civil_progress",
+		"localField":   "_id",
+		"foreignField": "nodeid",
+		"as":           "progress"}}}
+	pipeline = append(pipeline, lookup)
+
+	cursor, err := civilCollection.Aggregate(ctx, pipeline)
 	if err != nil {
 		log.Fatal(err)
 		return nil, err
@@ -77,15 +90,15 @@ func GetCivils(path string) (*[]models.CivilDTO, error) {
 	var civils []models.CivilDTO
 
 	for cursor.Next(ctx) {
-		var civil models.Civil
+		var civil models.CivilProgessJoin
 		err = cursor.Decode(&civil)
 		if err != nil {
 			logr.Error(err)
 			return nil, err
 		}
-		civils = append(civils, models.CivilDoToDto(civil))
+		civils = append(civils, models.CivilJoinDoToDto(civil))
 	}
-	return &civils, nil
+	return civils, nil
 }
 
 func GetCivilFields() ([]models.CivilFields, error) {
@@ -111,24 +124,57 @@ func GetCivilFields() ([]models.CivilFields, error) {
 	return civilFields, nil
 }
 
-func AddCivilNode(civilNode models.CivilDTO) error {
+func AddCivilNode(nodePath string, civilNode models.CivilDTO) ([]models.CivilDTO, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	//civilCollection.U
 	defer cancel()
+	cur, err2 := civilCollection.Find(ctx, bson.M{"path": nodePath})
+	var civils []models.CivilDTO
+	if err2 != nil {
+		logr.Error(err2)
+		return nil, err2
+	}
+	for cur.Next(ctx) {
+		var civil models.Civil
+		if err2 = cur.Decode(&civil); err2 != nil {
+			logr.Error(err2)
+		}
+		civils = append(civils, models.CivilDoToDto(civil))
+	}
+
+	if len(civils) > 0 {
+		lastChild := civils[len(civils)-1]
+		split := strings.Split(lastChild.Id, "-")
+		lastChildId, _ := strconv.Atoi(split[len(split)-1])
+		split[len(split)-1] = strconv.Itoa(lastChildId + 1)
+
+		fmt.Printf("last child %d", strings.Join(split, "-"))
+
+		civilNode.Id = strings.Join(split, "-")
+
+	} else {
+		split := strings.Split(nodePath, ",")
+		civilNode.Id = split[len(split)-2] + "-" + strconv.Itoa(1)
+	}
+	civilNode.Path = nodePath
+
 	_, err := civilCollection.InsertOne(ctx, models.CivilDtoToDo(civilNode))
 
 	if err != nil {
-		return err
+		return nil, err
 	}
+	civils = append(civils, civilNode)
 
-	return nil
+	return civils, err
 }
 
 func UpdateCivilNode(civilNode models.CivilDTO) (models.CivilDTO, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	update := bson.M{
-		"$set": bson.M{"unit": civilNode.Unit,
+		"$set": bson.M{
+			"name":      civilNode.Name,
+			"unit":      civilNode.Unit,
 			"quantity":  civilNode.Quantity,
 			"supply":    civilNode.Supply,
 			"install":   civilNode.Install,
@@ -160,18 +206,24 @@ func AddWorkStatus(progress models.CivilProgressDTO) (*models.CivilProgressDTO, 
 			return nil, errors.New("Error decoding node from DB " + progress.NodeId)
 		}
 
-		if !(progress.Date.Time.Before(node.EndDate) && progress.Date.Time.After(node.StartDate)) {
+		if !(progress.Date.Time.Before(node.EndDate) &&
+			(progress.Date.Time.Equal(node.StartDate) || progress.Date.Time.After(node.StartDate))) {
 			return nil, errors.New("enter status date with in start date and end date range")
 		}
 
 	}
 	progressDO := models.CivilProgressDtoToDo(progress)
-	result, err := civilProgressCollection.InsertOne(ctx, progressDO)
+	filter := bson.M{"nodeid": progressDO.NodeId, "date": progressDO.Date}
+	update := bson.D{{"$set", progressDO}}
+	opts := options.Update().SetUpsert(true)
+	result, err := civilProgressCollection.UpdateOne(ctx, filter, update, opts)
 
 	if err != nil {
 		return nil, err
 	}
-	progress.Id = result.InsertedID.(primitive.ObjectID).String()
+	if result.UpsertedID != nil {
+		progress.Id = result.UpsertedID.(primitive.ObjectID).String()
+	}
 
 	return &progress, nil
 }
