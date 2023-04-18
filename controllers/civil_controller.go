@@ -140,3 +140,12 @@ func GetContractProgress(c *fiber.Ctx) error {
 	)
 
 }
+func GetContractScheduleProgress(c *fiber.Ctx) error {
+
+	progress := services.GetContractProgress()
+
+	return c.Status(http.StatusOK).JSON(
+		responses.APIResponse{Status: http.StatusOK, Message: "success", Body: progress},
+	)
+
+}

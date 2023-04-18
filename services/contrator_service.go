@@ -9,12 +9,171 @@ import (
 	"golang.org/x/exp/slices"
 	"mongo-rest/configs"
 	"mongo-rest/models"
+	"reflect"
+	"strconv"
 	"time"
 )
 
 var activityCollection = configs.GetCollection(configs.DB, "Activities1")
 var activitySchduleCollection = configs.GetCollection(configs.DB, "ActivitySchedule2")
 
+func GetContractProgress() models.ContractProgressResponse {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	addFields := bson.D{
+		{
+			"$addFields", bson.D{{"actId", bson.D{{"$toString", "$_id"}}}},
+		},
+	}
+	lookup := bson.D{
+		{
+			"$lookup", bson.D{
+				{"from", "ActivitySchedule2"},
+				{"localField", "actId"},
+				{"foreignField", "activityId"},
+				{"as", "schedules"},
+			},
+		},
+	}
+	aggregate, err := activityCollection.Aggregate(ctx, mongo.Pipeline{addFields, lookup})
+	if err != nil {
+		panic(err)
+	}
+
+	var progressDtos []map[string]interface{}
+	schColumns := make(map[int][]string)
+	for aggregate.Next(ctx) {
+		var progress models.ContractProgress
+		err := aggregate.Decode(&progress)
+		if err != nil {
+			panic(err)
+		}
+		group := make(map[int]map[string]float64)
+		actualGroup := make(map[int]map[string]float64)
+
+		for _, sch := range progress.Schedules {
+			if sch.Type == "Sch." {
+
+				if val, ok := group[sch.Year]; ok {
+					val[sch.Month] = sch.Value
+				} else {
+					group[sch.Year] = map[string]float64{
+						sch.Month: sch.Value,
+					}
+				}
+
+			} else if sch.Type == "Act." {
+				if val, ok := actualGroup[sch.Year]; ok {
+					val[sch.Month] = sch.Value
+				} else {
+					actualGroup[sch.Year] = map[string]float64{
+						sch.Month: sch.Value,
+					}
+				}
+
+			}
+
+			if v, ok := schColumns[sch.Year]; ok {
+				if !slices.Contains(v, sch.Month) {
+					v = append(v, sch.Month)
+					schColumns[sch.Year] = v
+				}
+
+			} else {
+				schColumns[sch.Year] = append(schColumns[sch.Year], sch.Month)
+			}
+
+		}
+
+		/*dtoSch := models.ContractProgressDTO{
+			Name:          progress.Name,
+			Weightage:     progress.Weightage,
+			UnitWeightage: progress.UnitWeightage,
+			Unit:          progress.Unit,
+			SORQuantity:   progress.SORQuantity,
+			SORCost:       progress.SORCost,
+			StartDate:     progress.StartDate,
+			FinishDate:    progress.FinishDate,
+			Type:          "Sch",
+			Schedules:     group,
+		}*/
+		dtoSch1 := map[string]interface{}{
+			"Activity":      progress.Name,
+			"Weightage":     progress.Weightage,
+			"UnitWeightage": progress.UnitWeightage,
+			"Unit":          progress.Unit,
+			"SORQuantity":   progress.SORQuantity,
+			"SORCost":       progress.SORCost,
+			"StartDate":     models.ISODate{Time: progress.StartDate, Format: "02/Jan/2006"},
+			"FinishDate":    models.ISODate{Time: progress.FinishDate, Format: "02/Jan/2006"},
+			"Type":          "Sch",
+		}
+		for y, mon := range group {
+			for k, m := range mon {
+				key := fmt.Sprintf("%s-%d", k, y)
+				dtoSch1[key] = m
+			}
+		}
+		progressDtos = append(progressDtos, dtoSch1)
+		dtoAct := map[string]interface{}{
+
+			"Activity":      progress.Name,
+			"Weightage":     0,
+			"UnitWeightage": progress.UnitWeightage,
+			"Unit":          "",
+			"SORQuantity":   0,
+			"SORCost":       0,
+			"Type":          "Act",
+		}
+		for y, mon := range actualGroup {
+			for k, m := range mon {
+				key := fmt.Sprintf("%s-%d", k, y)
+				dtoAct[key] = m
+			}
+		}
+		progressDtos = append(progressDtos, dtoAct)
+	}
+
+	fields := getScheduleProgressDisplayFields()
+
+	response := models.ContractProgressResponse{
+		Columns:    fields,
+		SchColumns: schColumns,
+		Data:       progressDtos,
+	}
+	return response
+
+}
+
+func getScheduleProgressDisplayFields() []string {
+	t := reflect.TypeOf(models.ContractProgressDTO{})
+
+	names := make([]string, t.NumField())
+	for i := range names {
+		names[i] = t.Field(i).Name
+	}
+	return names
+}
+
+func getMonthlySchedule(years []int, group map[int][]models.Months) ([]string, []interface{}) {
+	var yearFields []string
+	var yearValues []interface{}
+	for _, year := range years {
+		var fields []string
+		var fieldVals []interface{}
+
+		for _, m := range group[year] {
+			fields = append(fields, m.Name)
+			fieldVals = append(fieldVals, m.Value)
+		}
+		monthStruct := models.CreateStruct(fields, fieldVals)
+		yearFields = append(yearFields, strconv.Itoa(year))
+		yearValues = append(yearValues, monthStruct)
+
+	}
+	return yearFields, yearValues
+}
 func CaluclateProgress() models.ScheduleGraph {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
