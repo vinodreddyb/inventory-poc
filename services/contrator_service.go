@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	logr "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -17,6 +18,37 @@ import (
 var activityCollection = configs.GetCollection(configs.DB, "Activities1")
 var activitySchduleCollection = configs.GetCollection(configs.DB, "ActivitySchedule2")
 
+func GetContractProgressPieChart() map[string]interface{} {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	cur, err := activityCollection.Find(ctx, bson.M{})
+	defer cur.Close(ctx)
+
+	if err != nil {
+		logr.Error("Exception while getting Piechart data from mongo", err)
+		return nil
+	}
+
+	var labels []string
+	var data []float64
+	for cur.Next(ctx) {
+		var progress models.ContractProgress
+		err1 := cur.Decode(&progress)
+		if err1 != nil {
+			logr.Error("Exception while decoding Piechart data from mongo", err)
+			return nil
+		}
+		labels = append(labels, progress.Name)
+		data = append(data, progress.UnitWeightage)
+
+	}
+	contractProgres := map[string]interface{}{
+		"labels": labels,
+		"data":   data,
+	}
+	return contractProgres
+}
 func GetContractProgress() models.ContractProgressResponse {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

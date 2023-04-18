@@ -16,4 +16,5 @@ func CivilRoutes(app *fiber.App) {
 	app.Get("/civil/status/:nodeId", controllers.GetCivilProgress)
 	app.Get("/contract/scurve", controllers.GetContractProgress)
 	app.Get("/contract/schedule", controllers.GetContractScheduleProgress)
+	app.Get("/contract/piechart", controllers.GetContractScheduleProgressPieChart)
 }
