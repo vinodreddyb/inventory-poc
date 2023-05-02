@@ -1,17 +1,41 @@
 package configs
 
 import (
-	"github.com/joho/godotenv"
-	"log"
-	"os"
+	"fmt"
+	"github.com/spf13/viper"
+	"time"
 )
 
-func EnvMongoURI() string {
-	err := godotenv.Load()
+type Configuration struct {
+	MongoUri               string        `mapstructure:"MONGOURI"`
+	MongoDatabase          string        `mapstructure:"MONGO_DB"`
+	AccessTokenPrivateKey  string        `mapstructure:"ACCESS_TOKEN_PRIVATE_KEY"`
+	AccessTokenPublicKey   string        `mapstructure:"ACCESS_TOKEN_PUBLIC_KEY"`
+	RefreshTokenPrivateKey string        `mapstructure:"REFRESH_TOKEN_PRIVATE_KEY"`
+	RefreshTokenPublicKey  string        `mapstructure:"REFRESH_TOKEN_PUBLIC_KEY"`
+	AccessTokenExpiresIn   time.Duration `mapstructure:"ACCESS_TOKEN_EXPIRED_IN"`
+	RefreshTokenExpiresIn  time.Duration `mapstructure:"REFRESH_TOKEN_EXPIRED_IN"`
+	AccessTokenMaxAge      int           `mapstructure:"ACCESS_TOKEN_MAXAGE"`
+	RefreshTokenMaxAge     int           `mapstructure:"REFRESH_TOKEN_MAXAGE"`
+}
+
+var Config Configuration
+
+func LoadConfig() {
+	fmt.Println("Loading cofigs")
+	viper.AddConfigPath("./configs")
+	viper.SetConfigName("dev")
+	viper.SetConfigType("env")
+
+	viper.AutomaticEnv()
+
+	err := viper.ReadInConfig()
 
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		return
 	}
 
-	return os.Getenv("MONGOURI")
+	err = viper.Unmarshal(&Config)
+
+	return
 }

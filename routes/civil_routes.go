@@ -2,7 +2,7 @@ package routes
 
 import (
 	"github.com/gofiber/fiber/v2"
-	"mongo-rest/controllers"
+	"inventory-poc/controllers"
 )
 
 func CivilRoutes(app *fiber.App) {

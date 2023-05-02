@@ -5,34 +5,45 @@ import (
 	"fmt"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo/readpref"
 	"log"
 	"time"
 )
 
-func ConnectDB() *mongo.Client {
+func ConnectDB() {
 
-	client, err := mongo.NewClient(options.Client().ApplyURI(EnvMongoURI()))
+	fmt.Println("Loading mongo uri" + Config.MongoUri)
+	client, err := mongo.NewClient(options.Client().ApplyURI(Config.MongoUri))
 	if err != nil {
-		log.Fatal("Error creating new client to mongo ", err)
+		log.Fatal(err)
 	}
 
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
 	err = client.Connect(ctx)
 	if err != nil {
-		log.Fatal("Error Connecting to mongo ", err)
+		log.Fatal(err)
 	}
 
-	err = client.Ping(ctx, nil)
+	err = client.Ping(ctx, readpref.Primary())
 	if err != nil {
-		log.Fatal("Error Ping to mongo ", err)
+		log.Fatal(err)
 	}
 	fmt.Println("Connected to mongodb")
-	return client
+	MI = MongoInstance{
+		Client: client,
+	}
+
 }
 
-var DB = ConnectDB()
+type MongoInstance struct {
+	Client *mongo.Client
+}
 
-func GetCollection(client *mongo.Client, collectionName string) *mongo.Collection {
-	collection := client.Database("contract").Collection(collectionName)
+var MI MongoInstance
+
+func GetCollection(collectionName string) *mongo.Collection {
+	collection := MI.Client.Database(Config.MongoDatabase).Collection(collectionName)
 	return collection
 }

@@ -8,21 +8,21 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/exp/slices"
-	"mongo-rest/configs"
-	"mongo-rest/models"
+	"inventory-poc/configs"
+	"inventory-poc/models"
 	"reflect"
 	"strconv"
 	"time"
 )
 
-var activityCollection = configs.GetCollection(configs.DB, "Activities1")
-var activitySchduleCollection = configs.GetCollection(configs.DB, "ActivitySchedule2")
+//var activityCollection = configs.GetCollection("Activities1")
+//var activitySchduleCollection = configs.GetCollection("ActivitySchedule2")
 
 func GetContractProgressPieChart() map[string]interface{} {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	cur, err := activityCollection.Find(ctx, bson.M{})
+	cur, err := configs.GetCollection("Activities1").Find(ctx, bson.M{})
 	defer cur.Close(ctx)
 
 	if err != nil {
@@ -68,7 +68,7 @@ func GetContractProgress() models.ContractProgressResponse {
 			},
 		},
 	}
-	aggregate, err := activityCollection.Aggregate(ctx, mongo.Pipeline{addFields, lookup})
+	aggregate, err := configs.GetCollection("Activities1").Aggregate(ctx, mongo.Pipeline{addFields, lookup})
 	if err != nil {
 		panic(err)
 	}
@@ -234,7 +234,7 @@ func CaluclateProgress() models.ScheduleGraph {
 			},
 		},
 	}
-	aggregate, err := activitySchduleCollection.Aggregate(ctx, mongo.Pipeline{group})
+	aggregate, err := configs.GetCollection("ActivitySchedule2").Aggregate(ctx, mongo.Pipeline{group})
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -407,7 +407,7 @@ func getMonth(month int) string {
 	}
 }
 func getActivities(ctx context.Context) map[string]float64 {
-	cur, err2 := activityCollection.Find(ctx, bson.M{})
+	cur, err2 := configs.GetCollection("Activities1").Find(ctx, bson.M{})
 	defer cur.Close(ctx)
 	if err2 != nil {
 		fmt.Println(err2)

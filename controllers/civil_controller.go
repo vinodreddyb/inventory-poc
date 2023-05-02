@@ -3,9 +3,9 @@ package controllers
 import (
 	"github.com/gofiber/fiber/v2"
 	logr "github.com/sirupsen/logrus"
-	"mongo-rest/models"
-	"mongo-rest/responses"
-	"mongo-rest/services"
+	"inventory-poc/models"
+	"inventory-poc/responses"
+	"inventory-poc/services"
 	"net/http"
 )
 

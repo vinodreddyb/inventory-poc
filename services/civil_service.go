@@ -9,19 +9,20 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"inventory-poc/configs"
+	"inventory-poc/models"
 	"log"
-	"mongo-rest/configs"
-	"mongo-rest/models"
 	"strconv"
 	"strings"
 	"time"
 )
 
-var userCollection = configs.GetCollection(configs.DB, "Users")
-var civilCollection = configs.GetCollection(configs.DB, "civil")
-var civilFieldsCollection = configs.GetCollection(configs.DB, "civil_fields")
-var civilProgressCollection = configs.GetCollection(configs.DB, "civil_progress")
-
+/*
+var userCollection = configs.GetCollection("Users")
+var civilCollection = configs.GetCollection("civil")
+var civilFieldsCollection = configs.GetCollection("civil_fields")
+var civilProgressCollection = configs.GetCollection("civil_progress")
+*/
 func AddNewUser(user *models.User) (*models.User, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -32,7 +33,7 @@ func AddNewUser(user *models.User) (*models.User, error) {
 		Title:    user.Title,
 	}
 
-	result, err := userCollection.InsertOne(ctx, newUser)
+	result, err := configs.GetCollection("Users").InsertOne(ctx, newUser)
 
 	if err != nil {
 		return nil, err
@@ -45,7 +46,7 @@ func AddNewUser(user *models.User) (*models.User, error) {
 func GetAllUsers() []models.User {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	cursor, err := userCollection.Find(ctx, bson.M{})
+	cursor, err := configs.GetCollection("Users").Find(ctx, bson.M{})
 	if err != nil {
 		logr.Error(err)
 	}
@@ -80,7 +81,7 @@ func GetCivils(path string) ([]models.CivilDTO, error) {
 		"as":           "progress"}}}
 	pipeline = append(pipeline, lookup)
 
-	cursor, err := civilCollection.Aggregate(ctx, pipeline)
+	cursor, err := configs.GetCollection("civil").Aggregate(ctx, pipeline)
 	if err != nil {
 		log.Fatal(err)
 		return nil, err
@@ -105,7 +106,7 @@ func GetCivilFields() ([]models.CivilFields, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	cursor, err := civilFieldsCollection.Find(ctx, bson.M{})
+	cursor, err := configs.GetCollection("civil_fields").Find(ctx, bson.M{})
 	if err != nil {
 		log.Fatal(err)
 		return nil, err
@@ -128,7 +129,7 @@ func AddCivilNode(nodePath string, civilNode models.CivilDTO) ([]models.CivilDTO
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	//civilCollection.U
 	defer cancel()
-	cur, err2 := civilCollection.Find(ctx, bson.M{"path": nodePath})
+	cur, err2 := configs.GetCollection("civil").Find(ctx, bson.M{"path": nodePath})
 	var civils []models.CivilDTO
 	if err2 != nil {
 		logr.Error(err2)
@@ -158,7 +159,7 @@ func AddCivilNode(nodePath string, civilNode models.CivilDTO) ([]models.CivilDTO
 	}
 	civilNode.Path = nodePath
 
-	_, err := civilCollection.InsertOne(ctx, models.CivilDtoToDo(civilNode))
+	_, err := configs.GetCollection("civil").InsertOne(ctx, models.CivilDtoToDo(civilNode))
 
 	if err != nil {
 		return nil, err
@@ -182,7 +183,7 @@ func UpdateCivilNode(civilNode models.CivilDTO) (models.CivilDTO, error) {
 			"endDate":   civilNode.EndDate.Time,
 		},
 	}
-	result := civilCollection.FindOneAndUpdate(ctx, bson.M{"_id": civilNode.Id}, update)
+	result := configs.GetCollection("civil").FindOneAndUpdate(ctx, bson.M{"_id": civilNode.Id}, update)
 
 	if result.Err() != nil {
 		return models.CivilDTO{}, result.Err()
@@ -194,7 +195,7 @@ func UpdateCivilNode(civilNode models.CivilDTO) (models.CivilDTO, error) {
 func AddWorkStatus(progress models.CivilProgressDTO) (*models.CivilProgressDTO, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	nodeDetails := civilCollection.FindOne(ctx, bson.M{"_id": progress.NodeId})
+	nodeDetails := configs.GetCollection("civil").FindOne(ctx, bson.M{"_id": progress.NodeId})
 	if nodeDetails != nil {
 		// ErrNoDocuments means that the filter did not match any documents in the collection
 		if nodeDetails.Err() == mongo.ErrNoDocuments {
@@ -216,7 +217,7 @@ func AddWorkStatus(progress models.CivilProgressDTO) (*models.CivilProgressDTO, 
 	filter := bson.M{"nodeid": progressDO.NodeId, "date": progressDO.Date}
 	update := bson.D{{"$set", progressDO}}
 	opts := options.Update().SetUpsert(true)
-	result, err := civilProgressCollection.UpdateOne(ctx, filter, update, opts)
+	result, err := configs.GetCollection("civil_progress").UpdateOne(ctx, filter, update, opts)
 
 	if err != nil {
 		return nil, err
@@ -231,7 +232,7 @@ func AddWorkStatus(progress models.CivilProgressDTO) (*models.CivilProgressDTO, 
 func GetStatusGraph(nodeId string) ([]models.CivilProgressDTO, *models.CivilProgressGraph, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	nodeDetails := civilCollection.FindOne(ctx, bson.M{"_id": nodeId})
+	nodeDetails := configs.GetCollection("civil").FindOne(ctx, bson.M{"_id": nodeId})
 	if nodeDetails != nil {
 		// ErrNoDocuments means that the filter did not match any documents in the collection
 		if nodeDetails.Err() == mongo.ErrNoDocuments {
@@ -239,7 +240,7 @@ func GetStatusGraph(nodeId string) ([]models.CivilProgressDTO, *models.CivilProg
 		}
 	}
 
-	cursor, errD := civilProgressCollection.Find(ctx, bson.M{"nodeid": nodeId})
+	cursor, errD := configs.GetCollection("civil_progress").Find(ctx, bson.M{"nodeid": nodeId})
 	if errD != nil {
 		return nil, nil, errD
 	}
